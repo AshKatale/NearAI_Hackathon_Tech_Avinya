@@ -58,7 +58,7 @@ export default function ConnectModal() {
   return (
     <Modal onClose={s.closeConnect} label="Log in or sign up">
       <h2>{signup ? 'Create your account' : 'Log in'} <button onClick={s.closeConnect} aria-label="Close">&times;</button></h2>
-      <p className="sub">Attestra runs on Hedera testnet. Your account is your <b>ECDSA</b> wallet{signup ? ', protected by an email and password' : ', plus your password if you set one'}.</p>
+      <p className="sub">AgentBazaar runs on Hedera testnet. Your account is your <b>ECDSA</b> wallet{signup ? ', protected by an email and password' : ', plus your password if you set one'}.</p>
 
       {!started ? (
         <>

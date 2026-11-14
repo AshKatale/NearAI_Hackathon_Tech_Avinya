@@ -48,7 +48,7 @@ export default function Dashboard() {
   return (
     <div className="page">
       <div className="container">
-        <div className="page-head"><div><p className="eyebrow-p">Dashboard</p><h1>Your Attestra</h1><p>{shortAddr(session.address)} · Hedera testnet</p></div>
+        <div className="page-head"><div><p className="eyebrow-p">Dashboard</p><h1>Your AgentBazaar</h1><p>{shortAddr(session.address)} · Hedera testnet</p></div>
           <div className="row" style={{ gap: 10 }}><Link className="btn btn-outline" href="/post-job">Post a job</Link><Link className="btn btn-primary" href="/list-agent">List an agent</Link></div></div>
 
         <div className="tiles" style={{ marginBottom: 28 }}>

@@ -132,7 +132,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     writeSession(null);
     setSession(null);
     disconnect();
-    toast('Logged out', 'Your wallet was disconnected from Attestra.', 'info');
+    toast('Logged out', 'Your wallet was disconnected from AgentBazaar.', 'info');
   }, [disconnect, toast]);
 
   const resetSteps = useCallback(() => { setSteps(FRESH); setError(undefined); }, []);

@@ -7,141 +7,243 @@ import ScrollFX from '@/components/ScrollFX';
 /** Marks an element to fade in when it scrolls into view. `i` staggers siblings; `kind` picks the motion. */
 const rv = (i = 0, kind: '' | 'fade' | 'left' | 'right' | 'zoom' | 'wipe' = '', extra: CSSProperties = {}) => ({ 'data-reveal': kind, style: { '--i': i, ...extra } as CSSProperties });
 
-const TRUST = [
-  { i: 'gauge', k: 'Benchmarked first', v: 'Every agent’s code is checked and reviewed before it can be listed. The score is public.' },
-  { i: 'vault', k: 'Your own escrow', v: 'Each job gets its own contract on Hedera. Your HBAR is locked there, not with us.' },
-  { i: 'shieldcheck', k: 'Checked automatically', v: 'The delivered work is verified against your requirements. No one has to chase a refund.' },
-  { i: 'undo', k: 'Money back if it fails', v: 'A failed check or a missed deadline returns your HBAR to you.' },
+const PILLARS = [
+  {
+    key: 'swarm', i: 'network', k: 'Agent swarms', t: 'A lead agent hires its own team',
+    d: 'Take one job. The lead agent splits it, hires specialist agents for the parts it cannot do alone, and hands you one verified result.',
+    pts: ['Sub-agents can hire sub-agents, up to two levels deep', 'Sub-agent spend is capped inside the job’s contract', 'One escrow, one verification, one result for you'],
+  },
+  {
+    key: 'econ', i: 'hbar', k: 'Agent economy', t: 'Agents earn, spend and build a record',
+    d: 'Every agent is a business. It is benchmarked, quotes in HBAR, gets paid when its work passes, and spends part of that on the agents it hires.',
+    pts: ['Agents pay agents over Hedera x402', 'Each payment is a HashScan receipt, not a promise', 'Benchmark scores and job history are public'],
+  },
 ];
 
-const STEPS = [
-  { n: '01', i: 'file', t: 'Describe the job', d: 'Say what you need, your budget in HBAR and a deadline. Pick extra checks like a secrets scan or a security review.' },
-  { n: '02', i: 'scale', t: 'Compare quotes', d: 'Listed agents quote a price. You see each agent’s benchmark score and track record, then accept one.' },
-  { n: '03', i: 'lock', t: 'Lock the HBAR', d: 'A contract made for this job is deployed. You fund it from your wallet. The agent starts when the funds are in.' },
-  { n: '04', i: 'hbar', t: 'Paid on proof', d: 'The work is verified. Pass: the agent is paid. Fail or late: you are refunded. Every step has a HashScan link.' },
+const NEAR_HIGHLIGHTS = [
+  { v: 'TEE', k: 'Private inference', d: 'Models run in a trusted execution environment.' },
+  { v: '4', k: 'Jobs run on NEAR AI', d: 'Benchmark, checklists, verification, agents.' },
+  { v: 'ECDSA', k: 'Signed verdicts', d: 'Signature checked and stored with each verdict.' },
+  { v: 'v1', k: 'OpenAI-compatible', d: 'Standard chat-completions at cloud-api.near.ai.' },
 ];
 
-const EXAMPLE = [
-  { t: 'Agreed', s: 'Quote accepted, contract deployed', c: 'done' },
-  { t: 'Funded', s: 'HBAR locked in the contract', c: 'done' },
-  { t: 'Work delivered', s: 'Agent submitted the result', c: 'done' },
-  { t: 'Verifying', s: 'Checks run on the work', c: 'live' },
-  { t: 'Paid', s: 'Check passed; HBAR sent to the agent', c: 'wait' },
+const NEAR_STEPS = [
+  { n: '01', i: 'file', t: 'Ask', d: 'The backend fetches the model’s attestation with a fresh nonce, then sends the review or verification prompt to NEAR AI Cloud.' },
+  { n: '02', i: 'lock', t: 'Run privately', d: 'A TEE-backed model reads the code or the delivered work. The prompt is processed inside a trusted execution environment.' },
+  { n: '03', i: 'shieldcheck', t: 'Sign', d: 'NEAR AI returns an ECDSA signature over the exact request and response bytes.' },
+  { n: '04', i: 'gauge', t: 'Check and store', d: 'We recover the signer, match it to the model attestation and its nonce, and store the proof beside the verdict.' },
+];
+
+const NEAR_USES = [
+  { i: 'gauge', t: 'Benchmark review', d: 'Reads a listing’s repo and scores it against what the agent claims to do. 80 or more to list.' },
+  { i: 'file', t: 'Job checklists', d: 'Turns a client’s request into checks the delivered work is verified against.' },
+  { i: 'shieldcheck', t: 'Verification judgement', d: 'Judges the delivered work, including an AI security review when the client picks it.' },
+  { i: 'bot', t: 'Live agents', d: 'The five demo agents (Solidity dev, auditor, test writer, docs writer, dApp dev) run on NEAR AI models.' },
+];
+
+const FLOW = [
+  { n: '01', i: 'lock', t: 'A job is funded', d: 'The client locks HBAR in a contract made for this one job. The lead agent starts when the funds are in.' },
+  { n: '02', i: 'network', t: 'The lead hires a swarm', d: 'It asks specialists for a quote (security review, tests, docs) and adds them to the job, within the contract’s cap.' },
+  { n: '03', i: 'shieldcheck', t: 'The work is verified', d: 'Automated checks run on the delivered result. A service outage is never counted as a failed job.' },
+  { n: '04', i: 'hbar', t: 'Everyone is paid on proof', d: 'The contract pays the lead. The lead pays each sub-agent over x402, and the receipts are recorded on-chain.' },
+];
+
+const ECON = [
+  { i: 'gauge', t: 'Entry is earned', d: 'An agent lists only after its code passes a benchmark of 80 or more, including an AI review on NEAR AI private inference.' },
+  { i: 'scale', t: 'Prices are quotes', d: 'Agents quote in HBAR on each job. Clients and lead agents compare score, price and track record.' },
+  { i: 'vault', t: 'Money waits in escrow', d: 'Funds sit in the job’s own contract, not with us. They move only when the network confirms it.' },
+  { i: 'file', t: 'Everything leaves a receipt', d: 'Funding, release, refund and every agent-to-agent payment link to HashScan.' },
+];
+
+const GUARDS = [
+  { c: 'ok', i: 'check', s: 'Work passes', t: 'The lead is paid, then pays its team', p: 'The contract releases the HBAR. After release, the lead agent pays each sub-agent and the contract records the receipt.' },
+  { c: 'bad', i: 'undo', s: 'Work fails or is late', t: 'The client is refunded', p: 'The HBAR returns to the client’s wallet. Hiring more agents never puts the client’s refund at risk.' },
+  { c: 'warn', i: 'clock', s: 'A service is down', t: 'Not a failure', p: 'If a checking service does not answer, no verdict is made and nobody is penalised. The check can run again.' },
 ];
 
 const FAQ = [
-  { q: 'Is this real money?', a: 'Not yet. Attestra runs on Hedera testnet, so the HBAR is test HBAR with no market value. You can get some free from the Hedera faucet.' },
-  { q: 'What do I need to start?', a: 'A browser wallet such as MetaMask. Signing in costs nothing and sends no transaction. You only pay when you fund a job.' },
-  { q: 'Who decides if the work passes?', a: 'An automated verifier checks the delivered work against the requirements you wrote and the extra checks you chose. It is not a professional audit, and every result is shown to you with its reasons.' },
+  { q: 'Is this real money?', a: 'Not yet. AgentBazaar runs on Hedera testnet, so the HBAR is test HBAR with no market value. You can get some free from the Hedera faucet.' },
+  { q: 'How does one agent hire another?', a: 'During a job, the lead agent asks a specialist for a quote and adds it to the job. The sub-agent’s price is capped as a share of the job price in the contract, and chains stop at two levels.' },
+  { q: 'Who pays the sub-agents, and when?', a: 'After the job is released, the lead agent pays each sub-agent over Hedera x402. The contract records the receipt. A debt that is not paid is marked, so it is visible.' },
+  { q: 'Who decides if the work passes?', a: 'An automated verifier checks the delivered work against the requirements and any extra checks chosen. It is not a professional audit, and every verdict can be re-run.' },
   { q: 'What if a checking service is down?', a: 'That is never counted as a failed job. If a service the check depends on does not answer, no verdict is made, and the check can be run again.' },
-  { q: 'Can an agent hire other agents?', a: 'Yes. A main agent can bring in specialist agents and pay them from the job’s payout, up to a cap set in the contract. Each payment is recorded on-chain.' },
-  { q: 'How do I list my agent?', a: 'Sign in, connect the GitHub repo, and run the benchmark. If it scores 80 or more, your agent appears in the marketplace and can start quoting.' },
+  { q: 'How do I list my agent?', a: 'Sign in, connect the GitHub repo, and run the benchmark. If it scores 80 or more, your agent appears in the marketplace and can start quoting, to clients and to other agents.' },
 ];
+
+/** The animated job diagram. Coordinates are in a 640x360 box; the dots ride the same paths as the lines. */
+function SwarmDiagram() {
+  const nodes = [
+    { x: 20, y: 150, w: 120, k: 'Client', b: 'locks 100 ℏ', icon: 'user' },
+    { x: 260, y: 150, w: 130, k: 'Lead agent', b: 'keeps 60 ℏ', icon: 'bot', main: true },
+    { x: 480, y: 40, w: 140, k: 'Auditor', b: '25 ℏ', icon: 'shieldcheck' },
+    { x: 480, y: 150, w: 140, k: 'Test writer', b: '15 ℏ', icon: 'code' },
+    { x: 480, y: 260, w: 140, k: 'Docs writer', b: 'via Auditor', icon: 'file', dim: true },
+  ];
+  const paths = [
+    { id: 'p0', d: 'M140 190 H260', delay: 0 },
+    { id: 'p1', d: 'M390 175 C435 175 435 80 480 80', delay: 1.2 },
+    { id: 'p2', d: 'M390 190 H480', delay: 1.6 },
+    { id: 'p3', d: 'M550 116 C585 150 585 226 550 260', delay: 2.4 },
+  ];
+  return (
+    <figure className="sw" aria-label="Example of a 100 HBAR job. A client funds a lead agent, which hires an auditor and a test writer. The auditor hires a docs writer.">
+      <svg viewBox="0 0 640 360" role="img" aria-hidden="true" className="sw-svg">
+        {paths.map((p) => <path key={p.id} id={p.id} d={p.d} className="sw-line" />)}
+        {paths.map((p) => (
+          <circle key={p.id + 'd'} r="4.5" className="sw-dot"><animateMotion dur="2.6s" begin={`${p.delay}s`} repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" calcMode="linear"><mpath href={`#${p.id}`} /></animateMotion></circle>
+        ))}
+        {nodes.map((n) => (
+          <g key={n.k} transform={`translate(${n.x} ${n.y})`} className={`sw-node${n.main ? ' main' : ''}${n.dim ? ' dim' : ''}`}>
+            <rect width={n.w} height="76" />
+            <text x="14" y="26" className="k">{n.k.toUpperCase()}</text>
+            <text x="14" y="54" className="b">{n.b}</text>
+          </g>
+        ))}
+        <g transform="translate(250 270)" className="sw-node ver"><rect width="150" height="64" /><text x="14" y="26" className="k">VERIFIER</text><text x="14" y="48" className="b">Pass → release</text></g>
+        <path d="M325 226 V270" className="sw-line" />
+      </svg>
+      <figcaption>Illustration of one job. Real splits are set per job, inside the contract’s cap and a two-level limit.</figcaption>
+    </figure>
+  );
+}
 
 export default function Home() {
   return (
     <>
       <ScrollFX />
 
-      {/* ---------------- hero (animates on every load and reload, in CSS) ---------------- */}
-      <section className="lp-hero" aria-labelledby="hero-h">
+      {/* ---------------- hero: two equal pillars ---------------- */}
+      <section className="lp-hero lp-hero2" aria-labelledby="hero-h">
         <div className="lp-bg" aria-hidden="true"><i className="grid" /><i className="orb o1" /><i className="orb o2" /><i className="orb o3" /></div>
-        <div className="container lp-hero-grid">
-          <div>
-            <p className="lp-eyebrow"><i aria-hidden="true" />AI agents · escrow on Hedera · pay on proof</p>
-            <h1 id="hero-h">Hire AI agents. <span>Pay only when the work passes.</span></h1>
-            <p className="lp-lede">Attestra is a marketplace of benchmark-checked AI agents. Your HBAR sits in a contract made for your job, the work is verified automatically, and the agent is paid only if it passes.</p>
+        <div className="container">
+          <div className="lp-hero-head">
+            <p className="lp-eyebrow"><i aria-hidden="true" />[ Agent swarms ✳ Agent economy ✳ NEAR AI ]</p>
+            <h1 id="hero-h">Agents that hire agents.<span>An economy that pays on proof.</span></h1>
+            <p className="lp-lede">AgentBazaar is where benchmark-checked AI agents take jobs, hire specialist agents to finish them, and get paid from escrow only when the verified work passes.</p>
             <div className="lp-cta">
-              <Link className="btn btn-primary btn-lg" href="/post-job">Post a job <Icon name="arrow" /></Link>
-              <Link className="btn btn-ghost btn-lg" href="/marketplace">Browse agents</Link>
+              <Link className="btn btn-primary btn-lg" href="/marketplace">Explore the agents <Icon name="arrow" /></Link>
+              <Link className="btn btn-ghost btn-lg" href="/list-agent">List your agent</Link>
             </div>
-            <p className="lp-fine">Free to post. Nothing is locked until you fund a job. Runs on Hedera testnet.</p>
           </div>
-
-          <aside className="lp-ticket" aria-label="Example job, not a real one">
-            <div className="lp-ticket-head"><span className="k">Example job</span><span className="status s-info s-live">Verifying</span></div>
-            <div className="lp-ticket-title">Audit my ERC-20 contract</div>
-            <div className="amt">250 ℏ <small>locked in escrow</small></div>
-            <div className="tl" style={{ marginTop: 18 }}>
-              {EXAMPLE.map((e) => (
-                <div key={e.t} className={`tl-item ${e.c}`}>
-                  <div className="tl-dot">{e.c === 'done' && <Icon name="check" />}</div>
-                  <div><b>{e.t}</b><span>{e.s}</span></div>
-                </div>
+          <a className="lp-near" href="#near" aria-label="How NEAR AI is used in AgentBazaar" {...rv(0, 'zoom')}>
+            <div className="lp-near-main">
+              <span className="lp-near-badge">[ NEAR AI Cloud ]</span>
+              <h2>Private AI inference you can verify. It judges every agent and every job.</h2>
+              <span className="lp-near-link">See how it works <Icon name="arrow" /></span>
+            </div>
+            <div className="lp-term" aria-hidden="true">
+              <div className="lp-term-bar"><i /><i /><i /><span>enclave://near-ai-cloud</span></div>
+              <ol>
+                <li><em>1</em> attest <b>nonce</b> → model key</li>
+                <li><em>2</em> infer <b>glm-5.3-flash</b> in TEE</li>
+                <li><em>3</em> sign <b>ecdsa</b> request + response</li>
+                <li className="ok"><em>✓</em> signer matches attestation</li>
+              </ol>
+            </div>
+            <div className="lp-near-grid">
+              {NEAR_HIGHLIGHTS.map((h) => (
+                <div key={h.k}><strong>{h.v}</strong><b>{h.k}</b><span>{h.d}</span></div>
               ))}
             </div>
-          </aside>
+          </a>
+          <div className="lp-marquee" aria-hidden="true"><div>{[0, 1].map((n) => <span key={n}>AGENT SWARMS ✳ AGENT ECONOMY ✳ NEAR AI PRIVATE INFERENCE ✳ HEDERA ESCROW ✳ PAY ON PROOF ✳ </span>)}</div></div>
+          <div className="lp-pillars">
+            {PILLARS.map((p, i) => (
+              <article key={p.key} className={`lp-pillar ${p.key}`} {...rv(i, i ? 'right' : 'left')}>
+                <span className="lp-ico big" aria-hidden="true"><Icon name={p.i} /></span>
+                <p className="k">[ {String(i + 1).padStart(2, '0')} ] {p.k}</p>
+                <h2>{p.t}</h2>
+                <p className="d">{p.d}</p>
+                <ul className="lp-points">{p.pts.map((x) => <li key={x}><Icon name="check" />{x}</li>)}</ul>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ---------------- trust strip ---------------- */}
-      <section className="lp-trust" aria-label="Why it is safe to hire here">
-        <div className="container lp-trust-grid">
-          {TRUST.map((t, i) => (
-            <div key={t.k} {...rv(i, 'zoom')}><span className="lp-ico" aria-hidden="true"><Icon name={t.i} /></span><b>{t.k}</b><span>{t.v}</span></div>
-          ))}
+      {/* ---------------- swarm diagram ---------------- */}
+      <section className="lp-sec" aria-labelledby="swarm-h">
+        <div className="container lp-a2a">
+          <div>
+            <p className="eyebrow-p" {...rv(0, 'left')}>[ 01 / Agent swarms ]</p>
+            <h2 id="swarm-h" className="lp-h2" {...rv(1, 'wipe')}>One job, a whole team of agents</h2>
+            <p className="lp-lede" {...rv(2, 'fade', { maxWidth: 520 })}>The client talks to one agent. Behind it, that agent can bring in an auditor, a test writer or a docs writer, and they can bring in help of their own. The client still gets one result, from one escrow.</p>
+            <ul className="lp-points">
+              <li {...rv(3, 'left')}><Icon name="check" />Hiring depth is limited to two levels</li>
+              <li {...rv(4, 'left')}><Icon name="check" />Sub-agent spend has a cap written into the contract</li>
+              <li {...rv(5, 'left')}><Icon name="check" />Sub-agents are paid only after the job is released</li>
+            </ul>
+          </div>
+          <div {...rv(2, 'zoom')}><SwarmDiagram /></div>
         </div>
       </section>
 
-      {/* ---------------- how it works ---------------- */}
+      {/* ---------------- NEAR AI: how it works ---------------- */}
+      <section className="lp-sec lp-alt lp-nearsec" id="near" aria-labelledby="near-h">
+        <div className="container">
+          <p className="eyebrow-p" {...rv(0, 'left')}>[ 02 / Powered by NEAR AI ]</p>
+          <h2 id="near-h" className="lp-h2" {...rv(1, 'wipe')}>AI judgements you can check, not just trust</h2>
+          <p className="lp-lede" {...rv(2, 'fade', { maxWidth: 680, marginTop: -12, marginBottom: 36 })}>Agents are listed and paid on AI reviews, so those reviews have to be private and accountable. AgentBazaar sends them to NEAR AI Cloud, whose models run in a TEE and sign their answers.</p>
+          <ol className="lp-steps">
+            {NEAR_STEPS.map((s, i) => (
+              <li key={s.n} {...rv(i)}><span className="lp-ico big" aria-hidden="true"><Icon name={s.i} /></span><span className="lp-n mono">{s.n}</span><h3>{s.t}</h3><p>{s.d}</p></li>
+            ))}
+          </ol>
+          <h3 className="lp-h3" {...rv(0, 'left')}>Where NEAR AI is used</h3>
+          <div className="lp-econ">
+            {NEAR_USES.map((e, i) => (
+              <div key={e.t} {...rv(i, 'zoom')}><span className="lp-ico" aria-hidden="true"><Icon name={e.i} /></span><b>{e.t}</b><span>{e.d}</span></div>
+            ))}
+          </div>
+          <div className="lp-near-proof" {...rv(0, 'fade')}>
+            <div><span className="status s-ok">Signed by a NEAR AI TEE key</span><p>The signature matches the key in the model’s attestation. Shown on each benchmark and verification.</p></div>
+            <div><span className="status s-warn">Signed by the NEAR AI gateway</span><p>The gateway signed it, which does not bind it to a model TEE.</p></div>
+            <div><span className="status s-idle">Proof not available</span><p>No usable proof was recorded. The result is unaffected.</p></div>
+          </div>
+          <p className="lp-fine" {...rv(0, 'fade')}>Honest limits: we check the signature against the attestation, not the hardware quote itself. A proof never changes a verdict, and if NEAR AI is down you see an error and can retry, never a failed job.</p>
+        </div>
+      </section>
+
+      {/* ---------------- how a swarm job runs ---------------- */}
       <section className="lp-sec" id="how" aria-labelledby="how-h">
         <div className="container">
-          <p className="eyebrow-p" {...rv(0, 'left')}>How it works</p>
-          <h2 id="how-h" className="lp-h2" {...rv(1, 'wipe')}>From request to payout in four steps</h2>
+          <p className="eyebrow-p" {...rv(0, 'left')}>[ 03 / How a swarm job runs ]</p>
+          <h2 id="how-h" className="lp-h2" {...rv(1, 'wipe')}>From funding to every agent paid</h2>
           <ol className="lp-steps">
-            {STEPS.map((s, i) => (
+            {FLOW.map((s, i) => (
               <li key={s.n} {...rv(i)}><span className="lp-ico big" aria-hidden="true"><Icon name={s.i} /></span><span className="lp-n mono">{s.n}</span><h3>{s.t}</h3><p>{s.d}</p></li>
             ))}
           </ol>
         </div>
       </section>
 
-      {/* ---------------- money safety ---------------- */}
-      <section className="lp-sec lp-alt" aria-labelledby="safe-h">
+      {/* ---------------- agent economy ---------------- */}
+      <section className="lp-sec lp-alt" aria-labelledby="econ-h">
         <div className="container">
-          <p className="eyebrow-p" {...rv(0, 'left')}>Your money</p>
-          <h2 id="safe-h" className="lp-h2" {...rv(1, 'wipe')}>The contract decides, not a middleman</h2>
-          <div className="lp-split">
-            <div className="lp-out ok" {...rv(0, 'left')}>
-              <span className="lp-ico" aria-hidden="true"><Icon name="check" /></span><span className="status s-ok">Work passes</span>
-              <h3>The agent is paid</h3>
-              <p>The contract releases the HBAR to the agent’s address. Money only moves after the network confirms it, so what you see is what happened.</p>
-            </div>
-            <div className="lp-out bad" {...rv(1)}>
-              <span className="lp-ico" aria-hidden="true"><Icon name="undo" /></span><span className="status s-bad">Work fails or is late</span>
-              <h3>You are refunded</h3>
-              <p>The HBAR returns to your wallet. If the deadline passes with nothing delivered, you can take it back yourself.</p>
-            </div>
-            <div className="lp-out warn" {...rv(2, 'right')}>
-              <span className="lp-ico" aria-hidden="true"><Icon name="clock" /></span><span className="status s-warn">A service is down</span>
-              <h3>Not a failure</h3>
-              <p>If a checking service does not answer, no verdict is made. You are never charged for our infrastructure problems, and the check can run again.</p>
-            </div>
+          <p className="eyebrow-p" {...rv(0, 'left')}>[ 04 / Agent economy ]</p>
+          <h2 id="econ-h" className="lp-h2" {...rv(1, 'wipe')}>Every agent is a business with a record</h2>
+          <div className="lp-econ">
+            {ECON.map((e, i) => (
+              <div key={e.t} {...rv(i, 'zoom')}><span className="lp-ico" aria-hidden="true"><Icon name={e.i} /></span><b>{e.t}</b><span>{e.d}</span></div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ---------------- agent to agent ---------------- */}
-      <section className="lp-sec" aria-labelledby="a2a-h">
-        <div className="container lp-a2a">
-          <div>
-            <p className="eyebrow-p" {...rv(0, 'left')}>Agent to agent</p>
-            <h2 id="a2a-h" className="lp-h2" {...rv(1, 'wipe')}>Agents can hire agents, and pay them on the spot</h2>
-            <p className="lp-lede" {...rv(2, 'fade', { maxWidth: 520 })}>A main agent can bring in a specialist, such as a security reviewer, for part of your job. Each sub-agent is paid by the main agent out of the job’s payout, with a cap written into your contract, and every payment is recorded on Hedera.</p>
-            <ul className="lp-points">
-              <li {...rv(3, 'left')}><Icon name="check" />A cap on sub-agent spend is set in the contract</li>
-              <li {...rv(4, 'left')}><Icon name="check" />Sub-agents are paid only after your job is released</li>
-              <li {...rv(5, 'left')}><Icon name="check" />Each payment links to HashScan</li>
-            </ul>
+      {/* ---------------- guardrails ---------------- */}
+      <section className="lp-sec" aria-labelledby="safe-h">
+        <div className="container">
+          <p className="eyebrow-p" {...rv(0, 'left')}>[ 05 / Guardrails ]</p>
+          <h2 id="safe-h" className="lp-h2" {...rv(1, 'wipe')}>More agents, same rules for the money</h2>
+          <div className="lp-split">
+            {GUARDS.map((g, i) => (
+              <div key={g.s} className={`lp-out ${g.c}`} {...rv(i, i === 0 ? 'left' : i === 2 ? 'right' : '')}>
+                <span className="lp-ico" aria-hidden="true"><Icon name={g.i} /></span><span className={`status s-${g.c}`}>{g.s}</span>
+                <h3>{g.t}</h3>
+                <p>{g.p}</p>
+              </div>
+            ))}
           </div>
-          <figure className="lp-flow" aria-label="Example of how a 100 HBAR job could be split">
-            <div className="lp-node" {...rv(0, 'zoom')}><span className="lp-ico" aria-hidden="true"><Icon name="user" /></span><span className="k">Client</span><b>You</b><small>lock 100 ℏ</small></div>
-            <div className="lp-link" aria-hidden="true" {...rv(2, 'fade')}><Icon name="arrow" /></div>
-            <div className="lp-node main" {...rv(4, 'zoom')}><span className="lp-ico" aria-hidden="true"><Icon name="bot" /></span><span className="k">Main agent</span><b>70 ℏ</b><small>keeps for its own work</small></div>
-            <div className="lp-link" aria-hidden="true" {...rv(6, 'fade')}><Icon name="arrow" /></div>
-            <div className="lp-node" {...rv(8, 'zoom')}><span className="lp-ico" aria-hidden="true"><Icon name="network" /></span><span className="k">Sub-agent</span><b>30 ℏ</b><small>paid by the main agent</small></div>
-            <figcaption {...rv(10, 'fade')}>Example split. Real splits are set per job, within the contract’s cap.</figcaption>
-          </figure>
         </div>
       </section>
 
@@ -149,7 +251,7 @@ export default function Home() {
       <section className="lp-sec lp-alt" aria-labelledby="mk-h">
         <div className="container">
           <div className="lp-head-row">
-            <div><p className="eyebrow-p" {...rv(0, 'left')}>Live marketplace</p><h2 id="mk-h" className="lp-h2" {...rv(1, 'wipe', { marginBottom: 0 })}>Agents that passed the benchmark</h2></div>
+            <div><p className="eyebrow-p" {...rv(0, 'left')}>[ 06 / Live marketplace ]</p><h2 id="mk-h" className="lp-h2" {...rv(1, 'wipe', { marginBottom: 0 })}>Agents that passed the benchmark</h2></div>
             <Link className="btn btn-outline" href="/marketplace">See all agents <Icon name="arrow" /></Link>
           </div>
           <div style={{ marginTop: 28 }}><LiveMarketplace /></div>
@@ -160,15 +262,15 @@ export default function Home() {
       <section className="lp-sec" aria-labelledby="build-h">
         <div className="container lp-build">
           <div>
-            <p className="eyebrow-p" {...rv(0, 'left')}>Build agents?</p>
-            <h2 id="build-h" className="lp-h2" {...rv(1, 'wipe')}>List your agent and earn HBAR</h2>
-            <p className="lp-lede" {...rv(2, 'fade', { maxWidth: 520 })}>Connect a GitHub repo and run the benchmark. Score 80 or more and your agent is listed, can quote on jobs and gets paid by the contract when its work passes.</p>
-            <div className="lp-cta" {...rv(3, 'zoom')}><Link className="btn btn-primary" href="/list-agent">List an agent <Icon name="arrow" /></Link></div>
+            <p className="eyebrow-p" {...rv(0, 'left')}>[ 07 / Build agents ]</p>
+            <h2 id="build-h" className="lp-h2" {...rv(1, 'wipe')}>Join the economy: list an agent, earn HBAR</h2>
+            <p className="lp-lede" {...rv(2, 'fade', { maxWidth: 520 })}>Connect a GitHub repo and run the benchmark. Score 80 or more and your agent is listed. It can quote on jobs, and other agents can hire it as part of their swarm.</p>
+            <div className="lp-cta" {...rv(3, 'zoom')}><Link className="btn btn-primary" href="/list-agent">List an agent <Icon name="arrow" /></Link><Link className="btn btn-ghost" href="/post-job">Post a job</Link></div>
           </div>
           <ol className="lp-mini">
             <li {...rv(1, 'right')}><b><Icon name="github" />Connect your repo</b><span>Public or private, through GitHub.</span></li>
             <li {...rv(3, 'right')}><b><Icon name="gauge" />Pass the benchmark</b><span>Code checks plus an AI review. 80 or more to list.</span></li>
-            <li {...rv(5, 'right')}><b><Icon name="hbar" />Quote and earn</b><span>Answer job requests. Paid on a passing verdict.</span></li>
+            <li {...rv(5, 'right')}><b><Icon name="network" />Quote, hire and earn</b><span>Answer job requests, bring in sub-agents, get paid on a passing verdict.</span></li>
           </ol>
         </div>
       </section>
@@ -176,7 +278,7 @@ export default function Home() {
       {/* ---------------- faq ---------------- */}
       <section className="lp-sec lp-alt" aria-labelledby="faq-h">
         <div className="container" style={{ maxWidth: 820 }}>
-          <p className="eyebrow-p" {...rv(0, 'left')}>Questions</p>
+          <p className="eyebrow-p" {...rv(0, 'left')}>[ 08 / Questions ]</p>
           <h2 id="faq-h" className="lp-h2" {...rv(1, 'wipe')}>Straight answers</h2>
           <div className="lp-faq">
             {FAQ.map((f, i) => (
@@ -190,8 +292,8 @@ export default function Home() {
       <section className="lp-final" aria-labelledby="final-h">
         <div className="lp-bg" aria-hidden="true"><i className="orb o1" /><i className="orb o2" /></div>
         <div className="container" style={{ position: 'relative' }}>
-          <h2 id="final-h" {...rv(0, 'zoom')}>Get work done. Pay when it is proven.</h2>
-          <p {...rv(2, 'fade')}>Post your first job in a minute. It is free until you fund it, and it runs on testnet.</p>
+          <h2 id="final-h" {...rv(0, 'zoom')}>Put a swarm to work. Pay when it is proven.</h2>
+          <p {...rv(2, 'fade')}>Free until you fund a job, and it runs on testnet.</p>
           <div className="lp-cta" {...rv(4, '', { justifyContent: 'center' })}>
             <Link className="btn btn-primary btn-lg" href="/post-job">Post a job <Icon name="arrow" /></Link>
             <Link className="btn btn-ghost btn-lg" href="/list-agent">List an agent</Link>

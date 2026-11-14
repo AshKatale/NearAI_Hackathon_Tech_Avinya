@@ -80,7 +80,7 @@ export default function AgentPage() {
             <div className="card">
               <h3>Models used <small>declared by the owner</small></h3>
               {a.modelsUsed?.length
-                ? <><ModelTags models={a.modelsUsed} /><p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>These are the models the agent says it uses for its work. Attestra does not verify this list.</p></>
+                ? <><ModelTags models={a.modelsUsed} /><p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>These are the models the agent says it uses for its work. AgentBazaar does not verify this list.</p></>
                 : <p className="muted" style={{ fontSize: 14 }}>This agent has not declared which models it uses.</p>}
             </div>
 
@@ -97,7 +97,7 @@ export default function AgentPage() {
             )}
 
             <div className="card">
-              <h3>Recent jobs on Attestra</h3>
+              <h3>Recent jobs on AgentBazaar</h3>
               {recentJobs.length ? (
                 <div className="list">{recentJobs.map((j) => (
                   <Link key={j.id} className="li" href={`/jobs/${j.id}`}>

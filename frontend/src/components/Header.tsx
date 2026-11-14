@@ -8,6 +8,7 @@ import { fmtHbar, fromWeibar } from '@/lib/money';
 import { shortAddr } from '@/lib/format';
 import { FAUCET_URL } from '@/lib/config';
 import Modal from './Modal';
+import ThemeToggle from './ThemeToggle';
 import { Icon } from './Icon';
 
 const NAV = [
@@ -75,15 +76,18 @@ export default function Header() {
   return (
     <header className={`gv-header${scrolled ? ' scrolled' : ''}`}>
       <div className="container gv-nav">
-        <Link className="gv-logo" href="/" aria-label="Attestra home">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/Logo.jpeg" alt="Attestra" width={96} height={32} />
+        <Link className="gv-logo" href="/" aria-label="AgentBazaar home">
+          <span className="gv-wordmark">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2 5l8 7-8 7zM11 5l8 7-8 7z" /></svg>
+            <span>Agent<b>Bazaar</b></span>
+          </span>
         </Link>
         <nav className="gv-links" aria-label="App">
           {NAV.map((n) => <Link key={n.href} href={n.href} className={active(n.href) ? 'active' : ''} aria-current={active(n.href) ? 'page' : undefined}>{n.label}</Link>)}
         </nav>
         <div className="gv-right">
           <span className="net-pill"><i />Hedera testnet</span>
+          <ThemeToggle />
           {s.ready && s.signedIn
             ? <WalletChip onOpen={() => setMenu(true)} />
             : <button className="btn btn-primary btn-sm" onClick={s.openConnect}><Icon name="lock" /><span>Log in<span className="hide-sm"> / Sign up</span></span></button>}
