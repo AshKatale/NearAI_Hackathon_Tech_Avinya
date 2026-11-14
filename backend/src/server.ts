@@ -1,4 +1,3 @@
-import { pathToFileURL } from 'node:url';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { ZodError } from 'zod';
@@ -53,7 +52,9 @@ export async function buildServer() {
   return app;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Start listening unless a test imports this file. (Comparing process.argv[1] with import.meta.url broke under pm2, which
+// launches the process through its own wrapper, so the server never started there.)
+if (!process.env.VITEST) {
   const app = await buildServer();
   await app.listen({ port: env.PORT, host: '0.0.0.0' });
   startIndexer();

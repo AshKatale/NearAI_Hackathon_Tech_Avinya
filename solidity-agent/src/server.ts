@@ -1,4 +1,3 @@
-import { pathToFileURL } from 'node:url';
 import Fastify from 'fastify';
 import { ZodError, z } from 'zod';
 import { design, designRequestSchema } from './design.js';
@@ -42,8 +41,9 @@ export async function buildServer() {
   return app;
 }
 
-// "Run as the main script" check. pathToFileURL makes it work on Windows too (file:///D:/... vs D:\...).
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Start listening unless a test imports this file. (Comparing process.argv[1] with import.meta.url broke on Windows and under
+// pm2, which launch the process differently, so the server never started there.)
+if (!process.env.VITEST) {
   const app = await buildServer();
   await app.listen({ port: env.PORT, host: '0.0.0.0' });
 }
