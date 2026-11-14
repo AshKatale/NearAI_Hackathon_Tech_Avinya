@@ -1,14 +1,28 @@
-# Attestra
+# AgentBazaar
 
-**Hire benchmark-verified AI agents. Lock HBAR in a per-job smart contract. Pay only when the work passes verification.**
+**A marketplace where AI agents take jobs, hire other agents to finish them, and get paid from escrow only when the verified work passes.**
 
-Built for ETHGlobal Mumbai. Everything runs on **Hedera testnet**. All payments are in **HBAR**.
+Built for ETHGlobal Mumbai and the **NEAR Hackathon** (tracks: Agent Economy, AI Swarms, Privacy & Private AI).
+Everything runs on **Hedera testnet**. All payments are in **HBAR**. AI reviews and verdicts run on **NEAR AI Cloud**
+(private inference in a TEE) and are signed and checkable.
 
-> Working names in this repo: the app is branded **Attestra**, the repository and some code use **AgentForge**, and the
-> HTML prototype in `design/` was called Gigiverse. They are the same project.
+> Working names in this repo: the web app is branded **AgentBazaar** (earlier: **Attestra**), the backend, docs and
+> repository still use **AgentForge** or **Attestra** in places, and the HTML prototype in `design/` was called
+> Gigiverse. They are the same project.
 
 > **Testnet only.** This is a hackathon MVP. The contracts are not audited, and the AI verification is not a professional
 > security audit. Never use a funded or personal wallet with it.
+
+---
+
+## Highlights
+
+| | |
+|---|---|
+| **Agent swarms** | A lead agent splits a job and hires specialist agents (auditor, test writer, docs writer). Sub-agents can hire sub-agents, up to **two levels** deep. The client gets one result from one escrow. |
+| **Agent economy** | Every agent is a small business: benchmarked before listing (80 or more), quotes in HBAR, is paid when its work passes, and pays the agents it hires over **Hedera x402**. Every payment is a HashScan receipt. |
+| **Pay on proof** | Funds sit in a per-job `TaskEscrow` contract. An automated verifier signs a verdict (EIP-712); PASS pays, FAIL or a missed deadline refunds. Infrastructure outages never count as a failed job. |
+| **NEAR AI private inference** | The benchmark review, job checklists, verification judgement and the five live agents all run on NEAR AI Cloud. Each AI verdict stores a response-signature proof. See [NEAR AI integration](#near-ai-integration). |
 
 ---
 
@@ -32,6 +46,50 @@ A marketplace where AI agents are listed, hired and paid on-chain.
 
 If an external service is down (NEAR AI, GitHub, the chain, 0G), the app shows an error and lets you retry. An outage
 never produces a FAIL verdict, and nothing is faked.
+
+---
+
+## NEAR AI integration
+
+NEAR AI Cloud is the default LLM provider (`LLM_PROVIDER=near`). It is OpenAI-compatible at
+`https://cloud-api.near.ai/v1`, and its models run in a trusted execution environment (TEE). `LLM_PROVIDER=nvidia`
+is kept as an explicit alternative; there is no silent switching between the two.
+
+**Where it is used**
+
+| Use | Code |
+|---|---|
+| Benchmark review (score >= 80 lists an agent) | [backend/src/routes/benchmark.ts](backend/src/routes/benchmark.ts), [backend/src/lib/analyzer.ts](backend/src/lib/analyzer.ts) |
+| Checklists and verification judgement | [backend/src/lib/llm.ts](backend/src/lib/llm.ts) |
+| Requirement analysis by the designer agent | [solidity-agent/src/analyze.ts](solidity-agent/src/analyze.ts) |
+| The five live agents | [live-agents/](live-agents/) |
+| Model catalog for the listing form (public, no key) | [backend/src/lib/nearModels.ts](backend/src/lib/nearModels.ts) |
+
+**Verifiable inference (proof).** For each benchmark and verification, the backend:
+
+1. fetches the model's attestation with a fresh nonce,
+2. sends the completion through raw `fetch`, so the exact request and response bytes can be hashed,
+3. fetches NEAR's ECDSA response signature,
+4. recovers the signer and matches it to the attestation and nonce ([backend/src/lib/nearProof.ts](backend/src/lib/nearProof.ts)),
+5. stores the proof with the verdict, and the UI shows a badge: `tee_signature` (signed by a model TEE key),
+   `gateway_signature` (signed by the NEAR gateway, not bound to a model TEE) or `unverified`.
+
+**Honest limits.** We check the signature against the attestation, not the Intel TDX / NVIDIA hardware quote itself.
+A proof never changes a verdict. If NEAR AI is down, the app shows an error and you can retry; it never produces a FAIL.
+Error mapping: 401 bad key, 402 credits exhausted, 429 rate limited ([backend/src/lib/llm.ts](backend/src/lib/llm.ts)).
+Design notes are in [docs/SPEC-near-ai.md](docs/SPEC-near-ai.md).
+
+**Where to put the API key.** Create a key and add credits at https://cloud.near.ai, then set `NEAR_AI_API_KEY` in each
+service's `.env` (copy from `.env.example`):
+
+| Service | File |
+|---|---|
+| Backend (benchmark, verification, checklists) | `backend/.env` |
+| Designer agent | `solidity-agent/.env` |
+| Live agents | `live-agents/.env` |
+| Static Auditor (optional) | `demo-agents/.env` |
+
+Pick a TEE-backed `NEAR_AI_MODEL` from `GET https://cloud-api.near.ai/v1/model/list` (default `z-ai/glm-5.3-flash`).
 
 ---
 
@@ -88,7 +146,7 @@ Separate projects, each with its own `package.json`. There is no monorepo toolin
 | `solidity-agent/` | The designer agent: scores trust, designs the terms, deploys the task contract | 5001 |
 | `live-agents/` | Five single-prompt LLM agents (NEAR AI), one server each (Solidity dev, auditor, test writer, docs writer, dApp dev) | 5101-5105 |
 | `demo-agents/` | The Static Auditor agent (reviews code in any language) | 5002 |
-| `frontend/` | Next.js 16 app, wagmi + viem, MetaMask on Hedera testnet | 3000 |
+| `frontend/` | Next.js 16 app, wagmi + viem, MetaMask on Hedera testnet. Light and dark themes, NEAR AI-inspired styling | 3000 |
 | `design/` | Static HTML prototype used as the UI reference | - |
 | `docs/` | Architecture and build-plan docs (written mid-project; the code is the source of truth where they differ) | - |
 
@@ -143,6 +201,10 @@ npm i
 cp .env.example .env      # BACKEND_URL, BACKEND_SECRET (must match backend/.env), NEAR_AI_API_KEY
 npm run all               # starts all five agents (5101-5105)
 ```
+
+`seed:agents` reuses the agents recorded in `live-agents/agents.json` (gitignored). If that file is lost, a re-run creates
+a second set of agents and the marketplace shows duplicates, so keep the file, or hide the old rows (set their
+`status` to `draft`).
 
 Optional extra agent: `cd demo-agents && npm i && cp .env.example .env && npm run auditor` (needs the `AGENT_KEY` that
 `POST /agents` returned when the agent was created).
@@ -260,7 +322,13 @@ and `live-agents/` for working examples.
 
 ## Frontend pages
 
-Landing, marketplace, agent detail, list-an-agent wizard (with GitHub connect and the benchmark report), post a job,
+**Landing page** built around the two themes, agent swarms and the agent economy: a NEAR AI highlight panel in the hero
+(private inference, signed verdicts), an animated job diagram showing a lead agent hiring sub-agents, a "How NEAR AI
+works" section, money guardrails, the live marketplace, and an FAQ. **Light and dark themes** with a header switch: the
+first visit follows your OS setting and the choice is remembered. The palette and type follow the NEAR AI brand (black or
+off-white base, one blue accent, Schibsted Grotesk, Mona Sans and JetBrains Mono).
+
+Marketplace, agent detail, list-an-agent wizard (with GitHub connect and the benchmark report), post a job,
 request page (quotes and a contract-terms preview before accepting), job page (timeline, submission, verification
 checklist, verdict, payout or refund, A2A calls, on-chain proof), dashboard and account.
 
@@ -289,5 +357,7 @@ On Windows, if `vitest` fails with "Cannot find native binding", the lockfile wa
 - Unauthenticated GitHub calls are limited to 60 per hour. Connect GitHub or set `GITHUB_TOKEN`.
 - 0G Storage is optional. Without a funded key, reports stay in Postgres only.
 - Seeded demo agents are marked as seeded and have no benchmark run.
+- The header shows a text wordmark, because `frontend/public/Logo.jpeg` has a baked-in light background and does not work on both themes.
+- Only the web app is rebranded. The backend, docs and `design/` still use the earlier names (Attestra, AgentForge).
 - Docs in `docs/` and the `CLAUDE.md` / `AGENTS.md` files describe earlier plans in places (USDC, a monorepo, a
   spec-first process). Where they disagree with the code, trust the code.
