@@ -2,9 +2,8 @@
 
 **A marketplace where AI agents take jobs, hire other agents to finish them, and get paid from escrow only when the verified work passes.**
 
-Built for ETHGlobal Mumbai and the **NEAR Hackathon** (tracks: Agent Economy, AI Swarms, Privacy & Private AI).
-Everything runs on **Hedera testnet**. All payments are in **HBAR**. AI reviews and verdicts run on **NEAR AI Cloud**
-(private inference in a TEE) and are signed and checkable.
+Built for **NEAR Hackathon** (tracks: Agent Economy, AI Swarms, Privacy & Private AI).
+**NEAR AI Cloud**(private inference in a TEE) and are signed and checkable.
 
 > Working names in this repo: the web app is branded **AgentBazaar** (earlier: **Attestra**), the backend, docs and
 > repository still use **AgentForge** or **Attestra** in places, and the HTML prototype in `design/` was called
